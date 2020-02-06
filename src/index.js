@@ -5,6 +5,7 @@ import Stats from 'stats.js';
 
 let container, controls;
 let camera, scene, renderer;
+let raycaster, mouse;
 
 const stats = new Stats();
 stats.domElement.style.right = 0;
@@ -19,21 +20,35 @@ function addItems() {
 
   for (let x = - n / 2; x < n / 2; x++) {
     for (let z = - n / 2; z < n / 2; z++) {
+      // const color = new THREE.Color(`hsla(${(x + n / 2) / n * 360}, ${Math.round((x + n / 2) / n * 100)}%, ${Math.round((x + n / 2) / n * 100)}%, 1)`);
+      // const colorZ = new THREE.Color(`hsla(${(z + n / 2) / n * 360}, ${Math.round((z + n / 2) / n * 100)}%, ${Math.round((z + n / 2) / n * 100)}%, 1)`);
+      const color = new THREE.Color(`hsla(${(x + n / 2) / n * 360}, 100%, 55%, 1)`);
+      const colorZ = new THREE.Color(`hsla(${(z + n / 2) / n * 360}, 100%, 55%, 1)`);
+      color.multiply(colorZ);
       const size = 1;
       const geometry = new THREE.BoxBufferGeometry(size, size, size);
-      const material = new THREE.MeshPhongMaterial({ color: 0xffffff });
+      const material = new THREE.MeshPhongMaterial({ color: color });
       const cube = new THREE.Mesh(geometry, material);
       cube.position.set(x + size / 2, 0, z + size / 2);
       cube.castShadow = true;
       cube.receiveShadow = true;
 
-      const cubeTween = new TWEEN.Tween(cube.position)
-        .to({ y: Math.random() }, (Math.random() * 3000) + 1000)
-        .easing(TWEEN.Easing.Bounce.Out)
-        .yoyo({})
-        .repeat(Infinity)
-        .start();
+      const animDuration = (Math.random() * 2000) + 1000;
 
+      const cubeTweenOut = new TWEEN.Tween(cube.position)
+        .to({ y: 0 }, animDuration)
+        .easing(TWEEN.Easing.Bounce.Out);
+
+      const cubeTweenIn = new TWEEN.Tween(cube.position)
+        .to({ y: Math.random() }, animDuration)
+        .easing(TWEEN.Easing.Bounce.Out)
+        .onComplete(() => {
+          cubeTweenOut.start();
+        });
+
+
+      cube.tweenIn = cubeTweenIn;
+      cube.tweenOut = cubeTweenOut;
 
       scene.add(cube);
     }
@@ -56,7 +71,7 @@ function addLights() {
   topRight.shadow.camera.right = shadowSize;
   const topRightHelper = new THREE.DirectionalLightHelper(topRight, 1);
   scene.add(topRight);
-  scene.add(topRightHelper);
+  // scene.add(topRightHelper);
 
   const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
   backLight.position.set(0, 2, -6);
@@ -67,7 +82,32 @@ function addLights() {
   backLight.shadow.camera.right = shadowSize;
   const backLightHelper = new THREE.DirectionalLightHelper(backLight, 1);
   scene.add(backLight);
-  scene.add(backLightHelper);
+  // scene.add(backLightHelper);
+}
+
+function onMouseMove(event) {
+  const x = (event.touches) ? event.touches[0].clientX : event.clientX;
+  const y = (event.touches) ? event.touches[0].clientY : event.clientY;
+
+  mouse.x = (x / window.innerWidth) * 2 - 1;
+  mouse.y = - (y / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  // calculate objects intersecting the picking ray
+  var intersects = raycaster.intersectObjects(scene.children);
+
+
+  // intersects[ i ].object.material.color.set( 0xff0000 );
+  if (intersects.length) {
+    const obj = intersects[0].object;
+    if (obj.tweenIn && !obj.tweenIn.isPlaying() && !obj.tweenOut.isPlaying()) {
+      obj.tweenIn.start();
+    }
+  }
+
+  renderer.render(scene, camera);
+
 }
 
 function init() {
@@ -77,12 +117,15 @@ function init() {
   camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
 
   scene = new THREE.Scene();
-  // scene.fog = new THREE.Fog(0x000000, 10, 20);
+  // scene.fog = new THREE.Fog(0x000000, 10, 30);
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
+  // renderer.shadowMap.enabled = true;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.8;
   renderer.outputEncoding = THREE.sRGBEncoding
@@ -103,26 +146,24 @@ function init() {
   addItems();
 
   window.addEventListener('resize', onWindowResize, false);
-  // render();
+  window.addEventListener('mousemove', onMouseMove, false);
+  window.addEventListener('touchmove', onMouseMove, false);
   animate();
 }
 
 function onWindowResize() {
-
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-
   renderer.setSize(window.innerWidth, window.innerHeight);
-
-  // render();
 }
 
 function animate() {
-  // console.log(camera.position);
   stats.begin();
+
   TWEEN.update();
   controls.update();
   renderer.render(scene, camera);
+
   stats.end();
   requestAnimationFrame(animate);
 }
