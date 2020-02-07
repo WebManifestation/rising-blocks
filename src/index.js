@@ -27,7 +27,7 @@ function addItems() {
       color.multiply(colorZ);
       const size = 1;
       const geometry = new THREE.BoxBufferGeometry(size, size, size);
-      const material = new THREE.MeshPhongMaterial({ color: color });
+      const material = new THREE.MeshLambertMaterial({ color: color });
       const cube = new THREE.Mesh(geometry, material);
       cube.position.set(x + size / 2, 0, z + size / 2);
       cube.castShadow = true;
