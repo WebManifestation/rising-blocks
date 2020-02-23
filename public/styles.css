@@ -28,3 +28,21 @@ img {
 canvas {
   display: block;
 }
+
+#start-btn {
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: white;
+  padding: 8px 16px;
+  user-select: none;
+}
+
+#debug {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  background-color: white;
+  padding: 8px 16px;
+  user-select: none;
+}
